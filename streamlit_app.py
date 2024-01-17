@@ -13,8 +13,11 @@ def convert_df(df):
 
 st.header('IVS-10238 - Finding Project Sectors FY23')
 
-with st.sidebar.expander('About this app'):
-    st.write('This app has been created using streamlit to visualize our data. The source code can be found at      "Shared - IVS/3. Management/Data Quality Control/Data Cleaning/FY23 Cleaning/Project Sectors/WVC-10238-Project-Sectors-FY23"')
+with st.expander('About this app'):
+    st.markdown('''This app has been created using streamlit to visualize our data. The source code and input data can be found at   
+                   "Shared - IVS/3. Management/Data Quality Control/Data Cleaning/FY23 Cleaning/Project Sectors/WVC-10238-Project-Sectors-FY23"
+                or at [this link](https://worldvisioncanada.sharepoint.com/:f:/r/sites/ImpactHub2/Shared%20Documents/3.%20Management/Data%20Quality%20Control/Data%20Cleaning/FY23%20Cleaning/Project%20Sectors/WVC-10238-Project-Sectors-FY23?csf=1&web=1&e=ozJNNl)
+                ''')
     st.write('Written by Timmy Bender - last updated Jan 17, 2024')
 
 
@@ -31,14 +34,6 @@ proj_df2 = proj_df.copy()
 # proj_df2 = proj_df[['type','primary_sector','ivs_project_code']].groupby(by=['type','primary_sector']).count().reset_index()
 
 
-# r1col1, r1col2 = st.columns(2)
-# with r1col1:
-#     st.dataframe(proj_df2)
-
-# with r1col2:
-#     st.bar_chart(proj_df2, x="type", y="ivs_project_code", color="primary_sector", height=500)
-
-
 
 ## Indicator Sectors
     
@@ -48,14 +43,6 @@ ind_df.dropna(inplace=True)
 ind_df.rename(columns={'indicatorsectorfrom_irt': 'sector'}, inplace=True)
 ind_df['type'] = ind_df.apply(lambda x: str(x['ivs_project_code']).split("-")[1], axis=1)
 
-# count_ind = ind_df[['type','sector','ivs_project_code']].groupby(by=['type','sector']).count().reset_index()
-
-# r2col1, r2col2 = st.columns(2)
-# with r2col1:
-#     st.dataframe(count_ind)
-
-# with r2col2:
-#     st.bar_chart(count_ind, x="type", y=["ivs_project_code"], color="sector", height=500)
 
 ##compare project and Indicator %
 
@@ -210,17 +197,4 @@ with r2col2:
 
     st.plotly_chart(fig, height=800)
 
-# buffer to use for excel writer
-# buffer = io.BytesIO()
-# with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
-#     # Write each dataframe to a different worksheet.
-#     sankey_df.to_excel(writer, sheet_name='Sheet1', index=False)
 
-#     # writer.save()
-
-#     download2 = st.download_button(
-#         label="Download data as Excel",
-#         data=buffer,
-#         file_name= f'IVS-10238-download-{selected_type}.xlsx',
-#         mime="application/vnd.ms-excel"
-    # )
