@@ -3,15 +3,19 @@ import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
+import io
 st.set_page_config(layout="wide")
 
 
-st.header('Finding Project Sectors FY23')
-st.header('WVC-10238')
+@st.cache_data
+def convert_df(df):
+    return df.to_csv().encode('utf-8')
 
-with st.expander('About this app'):
+st.header('IVS-10238 - Finding Project Sectors FY23')
+
+with st.sidebar.expander('About this app'):
     st.write('This app has been created using streamlit to visualize our data. The source code can be found at      "Shared - IVS/3. Management/Data Quality Control/Data Cleaning/FY23 Cleaning/Project Sectors/WVC-10238-Project-Sectors-FY23"')
-    st.write('Written by Timmy Bender - last updated Jan 16, 2024')
+    st.write('Written by Timmy Bender - last updated Jan 17, 2024')
 
 
 ## sidebar
@@ -120,6 +124,12 @@ plt.grid(axis='y', zorder=1)
 col1, col2 = st.columns(2)
 with col1:
     st.write(merge_df)
+    st.download_button(
+        label="Download data as CSV",
+        data=convert_df(merge_df),
+        file_name= f'IVS-10238-sectors-{selected_type}.csv',
+        mime='text/csv'
+    )
 with col2:
     # st.write(fig)
     st.pyplot(fig)
@@ -172,6 +182,12 @@ r2col1, r2col2 = st.columns(2)
 
 with r2col1:
     st.write(sankey_df)
+    st.download_button(
+        label="Download data as CSV",
+        data=convert_df(sankey_df),
+        file_name= f'IVS-10238-sankey-{selected_type}.csv',
+        mime='text/csv'
+    )
 
 
 with r2col2: 
@@ -193,3 +209,18 @@ with r2col2:
     fig.update_layout(title_text="Sector Adjustments", font_size=20)
 
     st.plotly_chart(fig, height=800)
+
+# buffer to use for excel writer
+# buffer = io.BytesIO()
+# with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+#     # Write each dataframe to a different worksheet.
+#     sankey_df.to_excel(writer, sheet_name='Sheet1', index=False)
+
+#     # writer.save()
+
+#     download2 = st.download_button(
+#         label="Download data as Excel",
+#         data=buffer,
+#         file_name= f'IVS-10238-download-{selected_type}.xlsx',
+#         mime="application/vnd.ms-excel"
+    # )
