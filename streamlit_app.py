@@ -18,7 +18,7 @@ with st.expander('About this app'):
                    "Shared - IVS/3. Management/Data Quality Control/Data Cleaning/FY23 Cleaning/Project Sectors/WVC-10238-Project-Sectors-FY23"
                 or at [this link](https://worldvisioncanada.sharepoint.com/:f:/r/sites/ImpactHub2/Shared%20Documents/3.%20Management/Data%20Quality%20Control/Data%20Cleaning/FY23%20Cleaning/Project%20Sectors/WVC-10238-Project-Sectors-FY23?csf=1&web=1&e=ozJNNl)
                 ''')
-    st.write('Written by Timmy Bender - last updated Jan 17, 2024')
+    st.write('Written by Timmy Bender - last updated Jan 22, 2024')
 
 
 ## sidebar
@@ -29,7 +29,7 @@ selected_type = st.sidebar.selectbox("Choose a Project Type to get started", opt
 ## Project Sectors
 
 proj_df = pd.read_excel('./ProjectSectors.xlsx')
-proj_df['type'] = proj_df.apply(lambda x: x['ivs_project_code'].split("-")[1], axis=1)
+# proj_df['type'] = proj_df.apply(lambda x: x['ivs_project_code'].split("-")[1], axis=1)
 proj_df2 = proj_df.copy()
 # proj_df2 = proj_df[['type','primary_sector','ivs_project_code']].groupby(by=['type','primary_sector']).count().reset_index()
 
@@ -47,7 +47,8 @@ ind_df['type'] = ind_df.apply(lambda x: str(x['ivs_project_code']).split("-")[1]
 ##compare project and Indicator %
 
 st.subheader('Compare Project and Indicators')
-st.write('Comparing the proportion of indicators assigned to each sector to the proportion for projects assigned to those sectors.')
+st.write('In this section, we compare the proportion of indicators assigned to each sector and the proportion of projects assigned to those sectors.')
+
 
 if selected_type != 'All':
     filt_ind = ind_df[ind_df['type'] == selected_type]
@@ -136,65 +137,123 @@ st.write('Comparing the projects calculated primary sector to the final display 
 # st.write(proj_df)
 
 ##
-sector_lut = proj_df['primary_sector'].unique()
-start_sector_lut = [item for item in sector_lut + '_primary']
-full_sector_lut = np.append(sector_lut, start_sector_lut)
-# st.write(sector_lut.index('Health'))
-## sankey_df
-if selected_type != 'All':
-    filter_proj_df = proj_df[proj_df['type'] == selected_type]
-else:
-    filter_proj_df = proj_df
-
-filter_proj_df = filter_proj_df[['primary_sector','display_sector','ivs_project_code']]
-sankey_df = filter_proj_df.groupby(by=['primary_sector','display_sector']).count().reset_index()
-sankey_df.rename(columns={'ivs_project_code':'count'}, inplace=True)
-def get_index(x, column):
-    if column == 'primary_sector':
-        try:
-            return int(np.where(full_sector_lut == x[column]+'_primary')[0])
-        except:
-            return None
+def write_sankey(origin_column, destination_column, origin_suffix):
+    sector_lut = proj_df['primary_sector'].unique()
+    # st.write(sector_lut)
+    start_sector_lut = [item for item in sector_lut + origin_suffix]
+    full_sector_lut = np.append(sector_lut, start_sector_lut)
+    # st.write(sector_lut.index('Health'))
+    ## sankey_df
+    if selected_type != 'All':
+        filter_proj_df = proj_df[proj_df['type'] == selected_type]
     else:
+        filter_proj_df = proj_df
+    filter_proj_df = filter_proj_df[[origin_column,destination_column,'ivs_project_code']]
+    sankey_df = filter_proj_df.groupby(by=[origin_column,destination_column]).count().reset_index()
+    sankey_df.rename(columns={'ivs_project_code':'count'}, inplace=True)
+    def get_index(x, column):
+        if column == origin_column:
+            try:
+                return int(np.where(full_sector_lut == x[column]+origin_suffix)[0])
+            except:
+                return None
+        else:
+            try:
+                return int(np.where(full_sector_lut == x[column])[0])
+            except:
+                return None
+
+        
+    sankey_df['origin_ind'] = sankey_df.apply(lambda x: get_index(x, origin_column), axis=1)
+    sankey_df['destination_ind'] = sankey_df.apply(lambda x: get_index(x, destination_column), axis=1)
+    def get_destination_color(x):
+        dest = x['destination_ind']
+        color_lut = {
+            0:'#9054a1',
+            1:'#cc6600',
+            2:'#0099cc',
+            3:'#3da46a',
+            4:'#006661'
+        }
         try:
-            return int(np.where(full_sector_lut == x[column])[0])
+            return color_lut[dest]
         except:
-            return None
+            return '#808080'
+    
+    sankey_df['color'] = sankey_df.apply(lambda x: get_destination_color(x), axis=1)
+
+
+    r2col1, r2col2 = st.columns([3,5])
+
+    with r2col1:
+        st.write(sankey_df.drop(columns=['origin_ind','destination_ind','color']))
+        st.download_button(
+            label="Download data as CSV",
+            data=convert_df(sankey_df),
+            file_name= f'IVS-10238-sankey-{selected_type}-{origin_column}-{destination_column}.csv',
+            mime='text/csv'
+        )
+
+
+    with r2col2: 
+        fig = go.Figure(data=[go.Sankey(
+            node = dict(
+            pad = 15,
+            thickness = 20,
+            line = dict(color = "black", width = 1.5),
+            #   label = ["A1", "A2", "B1", "B2", "C1", "C2"],
+            label = full_sector_lut,
+            color = "rgba(0,0,0,0)"
+            ),
+            link = dict(
+            source = sankey_df['origin_ind'],
+            target = sankey_df['destination_ind'],
+            value = sankey_df['count'],
+            color = sankey_df['color'],
+        ))])
+
+        fig.update_layout(title_text="Sector Adjustments", font_size=18)
+
+        st.plotly_chart(fig, height=800)
+
+write_sankey("primary_sector","display_sector", "_primary")
+
+## Compare DPMS and Final
+st.divider()
+
+st.subheader('Comparing DPMS project sectors to display Sector')
+
+write_sankey("dpms_sector","display_sector", "_dpms")
+
+st.header('Appendix: Code logic to calculate Display_sector')
+st.code('''
+    def get_display_sector(x):
+    prim_sector = x['primary_sector'] #Rank 1 in counting indicators assigned to each sector
+    sec_sector = x['secondary_sector'] # Rank 2 in counting indicators assigned to each sector
+    big5 = ['Livelihoods', 'Child Protection and Participation', 'Health','Education', 'Water, Sanitation and Hygiene']
+    
+    ## if one of the big 5, leave as is
+    if prim_sector in big5:
+        return prim_sector
+    ## next check if secondary sector is one of the big 5. If so, use that.
+    elif sec_sector in big5:
+        return sec_sector
+    ## if a minor sector, assign to one of the big 5.
+    elif prim_sector in ['Faith and Development', 
+                    'Social Accountability | Advocacy', 
+                    'Gender Equality and Social Inclusion', 
+                    'Peacebuilding']:
+        return 'Child Protection and Participation'
+    
+    elif prim_sector in ['Climate Change',
+                    'Sustainability']:
+        return 'Livelihoods'
+    
+    else:
+        return 'Unknown'
 
     
-sankey_df['primary_ind'] = sankey_df.apply(lambda x: get_index(x, 'primary_sector'), axis=1)
-sankey_df['display_ind'] = sankey_df.apply(lambda x: get_index(x, 'display_sector'), axis=1)
-
-r2col1, r2col2 = st.columns(2)
-
-with r2col1:
-    st.write(sankey_df)
-    st.download_button(
-        label="Download data as CSV",
-        data=convert_df(sankey_df),
-        file_name= f'IVS-10238-sankey-{selected_type}.csv',
-        mime='text/csv'
-    )
-
-
-with r2col2: 
-    fig = go.Figure(data=[go.Sankey(
-        node = dict(
-        pad = 50,
-        thickness = 20,
-        line = dict(color = "black", width = 1.5),
-        #   label = ["A1", "A2", "B1", "B2", "C1", "C2"],
-        label = full_sector_lut,
-        color = "blue"
-        ),
-        link = dict(
-        source = sankey_df['primary_ind'],#[0, 1, 0, 2, 3, 3], # indices correspond to labels, eg A1, A2, A1, B1, ...
-        target = sankey_df['display_ind'],#[2, 3, 3, 4, 4, 5],
-        value = sankey_df['count'],#[8, 4, 2, 8, 4, 2]
-    ))])
-
-    fig.update_layout(title_text="Sector Adjustments", font_size=20)
-
-    st.plotly_chart(fig, height=800)
-
-
+        #This line runs the above function on each line of the dataframe and assigns it to a new column
+df3['display_sector'] = df3.apply(lambda x: get_display_sector(x), axis=1)
+'''
+)
