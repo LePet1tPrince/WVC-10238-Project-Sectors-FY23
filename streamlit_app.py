@@ -183,7 +183,7 @@ def write_sankey(origin_column, destination_column, origin_suffix, selected_type
     sankey_df['color'] = sankey_df.apply(lambda x: get_destination_color(x), axis=1)
 
 
-    r2col1, r2col2 = st.columns([3,5])
+    r2col1, r2col2 = st.columns([4,5])
 
     with r2col1:
         st.write(sankey_df.drop(columns=['origin_ind','destination_ind','color']))
