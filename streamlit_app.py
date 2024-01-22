@@ -14,7 +14,10 @@ def convert_df(df):
 st.header('IVS-10238 - Finding Project Sectors FY23')
 
 with st.expander('About this app'):
-    st.markdown('''This app has been created using streamlit to visualize our data. The source code and input data can be found at   
+    st.markdown('''This streamlit is meant to visualize the effects of how we are assigning projects to sectors. 
+                We used the sector coded to each indicator to rank each sector over a project (The sector with the most indicators gets ranked 1, the second most ranked 2, etc).
+                From there, we used some logic to assign the sector to one of the major 5 sectors.
+                The source code for this app and input data can be found at   
                    "Shared - IVS/3. Management/Data Quality Control/Data Cleaning/FY23 Cleaning/Project Sectors/WVC-10238-Project-Sectors-FY23"
                 or at [this link](https://worldvisioncanada.sharepoint.com/:f:/r/sites/ImpactHub2/Shared%20Documents/3.%20Management/Data%20Quality%20Control/Data%20Cleaning/FY23%20Cleaning/Project%20Sectors/WVC-10238-Project-Sectors-FY23?csf=1&web=1&e=ozJNNl)
                 ''')
@@ -222,10 +225,22 @@ write_sankey("primary_sector","display_sector", "_primary")
 st.divider()
 
 st.subheader('Comparing DPMS project sectors to display Sector')
-
+st.write('When projects are originally entered into DPMS, project managers assign them to a sector (or sometimes multiple). This diagram compares the sector in DPMs to what we have calculated in display_sector')
 write_sankey("dpms_sector","display_sector", "_dpms")
 
 st.header('Appendix: Code logic to calculate Display_sector')
+st.write('''PseudoCode:
+         1. Pull the projects sector ranks. If rank #1 is one of the big 5 sectors, assign display_sector to that. If not, move to the next step.
+         2. If the rank #2 sector is one of the big 5, assign that sector to the project. If not, move onto the next step/
+         3. If the rank #1 sector is any of the following, assign it to CPP. Otherwise, go onto the next step:
+            -Faith and Development
+            -Socaial Accountability and Advocacy
+            -GESI
+            -Peacebuidling
+         4. If rank #1 sector is any of the following, assign to livelihoods:
+            -Sustainability
+            -Climate Change
+         5. If none of the above criteria are met, assign the sector to "Unknown". ''')
 st.code('''
     def get_display_sector(x):
     prim_sector = x['primary_sector'] #Rank 1 in counting indicators assigned to each sector
