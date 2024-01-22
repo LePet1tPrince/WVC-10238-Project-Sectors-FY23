@@ -229,20 +229,21 @@ st.write('When projects are originally entered into DPMS, project managers assig
 write_sankey("dpms_sector","display_sector", "_dpms")
 
 st.header('Appendix: Code logic to calculate Display_sector')
-st.write('''PseudoCode:
-         1. Pull the projects sector ranks. If rank #1 is one of the big 5 sectors, assign display_sector to that. If not, move to the next step.
-         2. If the rank #2 sector is one of the big 5, assign that sector to the project. If not, move onto the next step/
-         3. If the rank #1 sector is any of the following, assign it to CPP. Otherwise, go onto the next step:
-            -Faith and Development
-            -Socaial Accountability and Advocacy
-            -GESI
-            -Peacebuidling
-         4. If rank #1 sector is any of the following, assign to livelihoods:
-            -Sustainability
-            -Climate Change
-         5. If none of the above criteria are met, assign the sector to "Unknown". ''')
+st.markdown('''''')
 st.code('''
-    def get_display_sector(x):
+# PseudoCode:  
+#  1. Pull the projects sector ranks. If rank #1 is one of the big 5 sectors, assign display_sector to that. If not, move to the next step.  
+#  2. If the rank #2 sector is one of the big 5, assign that sector to the project. If not, move onto the next step.  
+#  3. If the rank #1 sector is any of the following, assign it to CPP. Otherwise, go onto the next step:  
+#     -Faith and Development  
+#     -Socaial Accountability and Advocacy  
+#     -GESI  
+#     -Peacebuidling  
+#  4. If rank #1 sector is any of the following, assign to livelihoods:  
+#     -Sustainability  
+#     -Climate Change  
+#  5. If none of the above criteria are met, assign the sector to "Unknown". 
+def get_display_sector(x):
     prim_sector = x['primary_sector'] #Rank 1 in counting indicators assigned to each sector
     sec_sector = x['secondary_sector'] # Rank 2 in counting indicators assigned to each sector
     big5 = ['Livelihoods', 'Child Protection and Participation', 'Health','Education', 'Water, Sanitation and Hygiene']
