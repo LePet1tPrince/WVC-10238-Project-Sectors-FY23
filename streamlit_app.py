@@ -30,23 +30,25 @@ type_options = ['GNT', 'PNS','GIK','SPN','WFP','OTH', 'All']
 selected_type = st.sidebar.selectbox("Choose a Project Type to get started", options=type_options)
 
 ## Project Sectors
-
-proj_df = pd.read_excel('./ProjectSectors.xlsx')
-# proj_df['type'] = proj_df.apply(lambda x: x['ivs_project_code'].split("-")[1], axis=1)
-proj_df2 = proj_df.copy()
-# proj_df2 = proj_df[['type','primary_sector','ivs_project_code']].groupby(by=['type','primary_sector']).count().reset_index()
-
-
-
-## Indicator Sectors
-    
-# st.subheader('Sectors by Indicator')
-ind_df = pd.read_excel('./ITTSectors.xlsx')
-ind_df.dropna(inplace=True)
-ind_df.rename(columns={'indicatorsectorfrom_irt': 'sector'}, inplace=True)
-ind_df['type'] = ind_df.apply(lambda x: str(x['ivs_project_code']).split("-")[1], axis=1)
+@st.cache_data
+def read_files():
+    proj_df = pd.read_excel('./ProjectSectors.xlsx')
+    # proj_df['type'] = proj_df.apply(lambda x: x['ivs_project_code'].split("-")[1], axis=1)
+    proj_df2 = proj_df.copy()
+    # proj_df2 = proj_df[['type','primary_sector','ivs_project_code']].groupby(by=['type','primary_sector']).count().reset_index()
 
 
+
+    ## Indicator Sectors
+        
+    # st.subheader('Sectors by Indicator')
+    ind_df = pd.read_excel('./ITTSectors.xlsx')
+    ind_df.dropna(inplace=True)
+    ind_df.rename(columns={'indicatorsectorfrom_irt': 'sector'}, inplace=True)
+    ind_df['type'] = ind_df.apply(lambda x: str(x['ivs_project_code']).split("-")[1], axis=1)
+    return [proj_df, proj_df2, ind_df]
+
+[proj_df, proj_df2, ind_df] = read_files()
 ##compare project and Indicator %
 
 st.subheader('Compare Project and Indicators')
@@ -131,15 +133,10 @@ with col2:
 # with r3col2:
 #     st.bar_chart(filt_proj, y="ivs_project_code", x="sector", height=500)
 
-
-
 #Sankey Diagram
-st.subheader('Sankey Diagram')
-st.write('Comparing the projects calculated primary sector to the final display sector')
-
-# st.write(proj_df)
 
 ##
+@st.cache_data(experimental_allow_widgets=True)
 def write_sankey(origin_column, destination_column, origin_suffix):
     sector_lut = proj_df['primary_sector'].unique()
     # st.write(sector_lut)
@@ -219,57 +216,115 @@ def write_sankey(origin_column, destination_column, origin_suffix):
 
         st.plotly_chart(fig, height=800)
 
+
+st.subheader('FY23 Ranked vs Result Sectors')
+st.write('Comparing the projects calculated primary sector to the final display sector')
+
+
 write_sankey("primary_sector","display_sector", "_primary")
 
 ## Compare DPMS and Final
 st.divider()
 
-st.subheader('Comparing DPMS project sectors to display Sector')
+st.subheader('DPMS project sectors to display Sector')
 st.write('When projects are originally entered into DPMS, project managers assign them to a sector (or sometimes multiple). This diagram compares the sector in DPMs to what we have calculated in display_sector')
 write_sankey("dpms_sector","display_sector", "_dpms")
 
-st.header('Appendix: Code logic to calculate Display_sector')
-st.markdown('''''')
-st.code('''
-# PseudoCode:  
-#  1. Pull the projects sector ranks. If rank #1 is one of the big 5 sectors, assign display_sector to that. If not, move to the next step.  
-#  2. If the rank #2 sector is one of the big 5, assign that sector to the project. If not, move onto the next step.  
-#  3. If the rank #1 sector is any of the following, assign it to CPP. Otherwise, go onto the next step:  
-#     -Faith and Development  
-#     -Socaial Accountability and Advocacy  
-#     -GESI  
-#     -Peacebuidling  
-#  4. If rank #1 sector is any of the following, assign to livelihoods:  
-#     -Sustainability  
-#     -Climate Change  
-#  5. If none of the above criteria are met, assign the sector to "Unknown". 
-def get_display_sector(x):
-    prim_sector = x['primary_sector'] #Rank 1 in counting indicators assigned to each sector
-    sec_sector = x['secondary_sector'] # Rank 2 in counting indicators assigned to each sector
-    big5 = ['Livelihoods', 'Child Protection and Participation', 'Health','Education', 'Water, Sanitation and Hygiene']
+## Compare to FY22
+st.divider()
+st.subheader('FY22 sectors to final FY23 Sectors')
+st.write('Using Profile_FY19_23_v03.xlsx, comparing what sectors each project was assigned to in FY22 to FY23')
+write_sankey("fy22_sector","display_sector", "_FY22")
+
+st.divider()
+st.subheader('Project level Data')
+display_df = proj_df[['ivs_project_code','type','primary_sector','secondary_sector','dpms_sector','fy22_sector','display_sector']]
+
+st.cache_data()
+def my_filter(column_name, dataframe):
+    c1, c2 = st.columns([1,3])
+    with c1:
+        is_checked = st.checkbox(f"activate filter", key=f"{column_name}-check")
+    with c2:
+        search_key = st.selectbox(f'{column_name} Filter', options = proj_df[column_name].unique(), disabled=not is_checked, key=f"{column_name}-select")
+    if is_checked:
+        dataframe = dataframe[dataframe[column_name] == search_key]
     
-    ## if one of the big 5, leave as is
-    if prim_sector in big5:
-        return prim_sector
-    ## next check if secondary sector is one of the big 5. If so, use that.
-    elif sec_sector in big5:
-        return sec_sector
-    ## if a minor sector, assign to one of the big 5.
-    elif prim_sector in ['Faith and Development', 
-                    'Social Accountability | Advocacy', 
-                    'Gender Equality and Social Inclusion', 
-                    'Peacebuilding']:
-        return 'Child Protection and Participation'
+    return dataframe
     
-    elif prim_sector in ['Climate Change',
-                    'Sustainability']:
-        return 'Livelihoods'
-    
-    else:
-        return 'Unknown'
+
+
+r2col1, r2col2 = st.columns([2,3])
+
+with r2col1:
+    proj_code_search = st.text_input("Search for a whole or partial project code (eg. 'Somalia', 'SPN', 'PJT-GIK-Somalia-2019-008')")
+    display_df = my_filter('primary_sector', display_df)
+    display_df = my_filter('secondary_sector', display_df)
+    display_df = my_filter('dpms_sector', display_df)
+    display_df = my_filter('fy22_sector', display_df)
+    display_df = my_filter('display_sector', display_df)
+
 
     
-        #This line runs the above function on each line of the dataframe and assigns it to a new column
-df3['display_sector'] = df3.apply(lambda x: get_display_sector(x), axis=1)
-'''
-)
+
+with r2col2:
+    if proj_code_search != '':
+        st.dataframe(display_df[display_df['ivs_project_code'].str.contains(proj_code_search)])
+    else:
+        st.dataframe(display_df)
+
+    st.download_button(
+                label="Download data as CSV",
+                data=convert_df(display_df),
+                file_name= f'IVS-10238-project-sectors.csv',
+                mime='text/csv'
+            )
+
+
+st.divider()
+## Appendix Writing code
+st.header('Appendix')
+with st.expander('Appendix A: Code logic to calculate Display_sector'):
+    st.code('''
+    # PseudoCode:  
+    #  1. Pull the projects sector ranks. If rank #1 is one of the big 5 sectors, assign display_sector to that. If not, move to the next step.  
+    #  2. If the rank #2 sector is one of the big 5, assign that sector to the project. If not, move onto the next step.  
+    #  3. If the rank #1 sector is any of the following, assign it to CPP. Otherwise, go onto the next step:  
+    #     -Faith and Development  
+    #     -Socaial Accountability and Advocacy  
+    #     -GESI  
+    #     -Peacebuidling  
+    #  4. If rank #1 sector is any of the following, assign to livelihoods:  
+    #     -Sustainability  
+    #     -Climate Change  
+    #  5. If none of the above criteria are met, assign the sector to "Unknown". 
+    def get_display_sector(x):
+        prim_sector = x['primary_sector'] #Rank 1 in counting indicators assigned to each sector
+        sec_sector = x['secondary_sector'] # Rank 2 in counting indicators assigned to each sector
+        big5 = ['Livelihoods', 'Child Protection and Participation', 'Health','Education', 'Water, Sanitation and Hygiene']
+        
+        ## if one of the big 5, leave as is
+        if prim_sector in big5:
+            return prim_sector
+        ## next check if secondary sector is one of the big 5. If so, use that.
+        elif sec_sector in big5:
+            return sec_sector
+        ## if a minor sector, assign to one of the big 5.
+        elif prim_sector in ['Faith and Development', 
+                        'Social Accountability | Advocacy', 
+                        'Gender Equality and Social Inclusion', 
+                        'Peacebuilding']:
+            return 'Child Protection and Participation'
+        
+        elif prim_sector in ['Climate Change',
+                        'Sustainability']:
+            return 'Livelihoods'
+        
+        else:
+            return 'Unknown'
+
+        
+            #This line runs the above function on each line of the dataframe and assigns it to a new column
+    df3['display_sector'] = df3.apply(lambda x: get_display_sector(x), axis=1)
+    '''
+    )
