@@ -137,7 +137,7 @@ with col2:
 
 ##
 @st.cache_data(experimental_allow_widgets=True)
-def write_sankey(origin_column, destination_column, origin_suffix):
+def write_sankey(origin_column, destination_column, origin_suffix, selected_type):
     sector_lut = proj_df['primary_sector'].unique()
     # st.write(sector_lut)
     start_sector_lut = [item for item in sector_lut + origin_suffix]
@@ -221,20 +221,20 @@ st.subheader('FY23 Ranked vs Result Sectors')
 st.write('Comparing the projects calculated primary sector to the final display sector')
 
 
-write_sankey("primary_sector","display_sector", "_primary")
+write_sankey("primary_sector","display_sector", "_primary", selected_type)
 
 ## Compare DPMS and Final
 st.divider()
 
 st.subheader('DPMS project sectors to display Sector')
 st.write('When projects are originally entered into DPMS, project managers assign them to a sector (or sometimes multiple). This diagram compares the sector in DPMs to what we have calculated in display_sector')
-write_sankey("dpms_sector","display_sector", "_dpms")
+write_sankey("dpms_sector","display_sector", "_dpms", selected_type)
 
 ## Compare to FY22
 st.divider()
 st.subheader('FY22 sectors to final FY23 Sectors')
 st.write('Using Profile_FY19_23_v03.xlsx, comparing what sectors each project was assigned to in FY22 to FY23')
-write_sankey("fy22_sector","display_sector", "_FY22")
+write_sankey("fy22_sector","display_sector", "_FY22", selected_type)
 
 st.divider()
 st.subheader('Project level Data')
